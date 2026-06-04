@@ -1,6 +1,6 @@
 version = 1
 
-# Default for every file: original work of the organization, AGPL-3.0-or-later.
+# Every file is original work of the organization, licensed AGPL-3.0-or-later.
 # precedence = "closest" means a file's own inline SPDX header (when present) wins
 # over this wildcard, so source files can still carry their own headers.
 [[annotations]]
@@ -8,12 +8,3 @@ path = "**"
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 The Fisher Slopworks Co"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
-
-# CODE_OF_CONDUCT.md is the verbatim Contributor Covenant v2.1, which its authors
-# publish under CC-BY-4.0 — it keeps its upstream license, not the project's.
-# This entry comes AFTER the wildcard on purpose: the later, more specific match
-# wins, so the CoC resolves to CC-BY-4.0 (verify with `reuse spdx`).
-[[annotations]]
-path = "CODE_OF_CONDUCT.md"
-SPDX-FileCopyrightText = "2014 Coraline Ada Ehmke and the Contributor Covenant contributors"
-SPDX-License-Identifier = "CC-BY-4.0"

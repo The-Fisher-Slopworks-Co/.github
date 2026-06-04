@@ -37,8 +37,8 @@ reuse lint          # must report "compliant"
 
 ## Code of Conduct
 
-All participation is governed by our [Code of Conduct](CODE_OF_CONDUCT.md)
-(Contributor Covenant v2.1). By participating you are expected to uphold it.
+All participation is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By
+participating you are expected to uphold it.
 
 ## Reporting bugs & vulnerabilities
 

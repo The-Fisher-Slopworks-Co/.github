@@ -10,7 +10,7 @@ Organization-wide defaults for [The Fisher Slopworks Co](https://github.com/The-
 GitHub automatically applies the community-health files in this repository to
 **every** repository in the organization that does not provide its own:
 
-- [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) — Contributor Covenant v2.1
+- [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) — original, project-owned policy
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — default contribution guidelines
 - [`SECURITY.md`](SECURITY.md) — vulnerability disclosure policy
 
