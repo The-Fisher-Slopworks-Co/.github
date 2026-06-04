@@ -17,6 +17,9 @@ GitHub automatically applies the community-health files in this repository to
 [`profile/README.md`](profile/README.md) is the public profile page shown on the
 organization's landing page.
 
+The full org **compliance standard** — licensing, REUSE, and how to add or
+migrate repositories — is documented in [`COMPLIANCE.md`](COMPLIANCE.md).
+
 > **Note:** these defaults only fill in what a repository is *missing*. A repo
 > with its own `CODE_OF_CONDUCT.md` / `CONTRIBUTING.md` / `SECURITY.md` overrides
 > the default. They are surfaced in each repo's *Community Standards* view but
