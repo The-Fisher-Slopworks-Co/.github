@@ -27,6 +27,8 @@ Every project repository must:
    **`<year> The Fisher Slopworks Co`**.
 4. **Not** ship its own Code of Conduct / Security policy / Contributing guide —
    those are inherited from this `.github` repo.
+5. Keep its CI actions current via **Dependabot** — `.github/dependabot.yml`
+   tracking the `github-actions` ecosystem, weekly and grouped into one PR.
 
 Genuine third-party files keep their own license — see
 [Third-party code](#third-party-code-multiple-licenses).
@@ -40,6 +42,7 @@ Genuine third-party files keep their own license — see
 | License declared (prose) | `README.md` → `## License` section | `AGPL-3.0-or-later. See [LICENSE](LICENSE).` |
 | REUSE config | `REUSE.toml` | `**` wildcard, holder `<year> The Fisher Slopworks Co`, `AGPL-3.0-or-later` |
 | REUSE CI | `.github/workflows/reuse.yml` | `fsfe/reuse-action@v6` |
+| Dependabot | `.github/dependabot.yml` | `github-actions` ecosystem, `weekly` / monday, grouped under `*` |
 | Code of Conduct | *(none — inherited)* | this repo's `CODE_OF_CONDUCT.md` |
 | Security policy | *(none — inherited)* | this repo's `SECURITY.md` (contact `security@slopworks.org`) |
 | Contributing guide | *(none — inherited)* | this repo's `CONTRIBUTING.md` |
@@ -84,6 +87,31 @@ jobs:
       - uses: fsfe/reuse-action@v6
 ```
 
+`.github/dependabot.yml` — keep the GitHub Actions used by the repo's workflows
+current (a repo with package manifests should add the matching ecosystems —
+`npm`, `cargo`, `pip`, `gomod`, … — alongside this block):
+
+```yaml
+# SPDX-FileCopyrightText: 2026 The Fisher Slopworks Co
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Keep the GitHub Actions used by our CI / release / REUSE workflows current.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions:
+        patterns:
+          - "*"
+```
+
 Inline SPDX header for source files (optional but encouraged; use the file's
 comment syntax, e.g. `//`, `#`, `--`):
 
@@ -106,8 +134,9 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 3. Build your project. Governance docs are inherited automatically — **don't add
    your own**. Set your stack's license field to `AGPL-3.0-or-later`.
 
-The repo ships `LICENSE`, `LICENSES/`, `REUSE.toml`, and the REUSE CI from the
-first commit, and inherits CoC / Security / Contributing from this repo.
+The repo ships `LICENSE`, `LICENSES/`, `REUSE.toml`, the REUSE CI, and
+`.github/dependabot.yml` from the first commit, and inherits CoC / Security /
+Contributing from this repo.
 
 ## Migrating an existing project
 
@@ -129,7 +158,8 @@ Work on a branch and open a PR.
    reuse download AGPL-3.0-or-later            # writes LICENSES/AGPL-3.0-or-later.txt
    cp LICENSES/AGPL-3.0-or-later.txt LICENSE   # root copy so GitHub detects the license
    ```
-4. **Add `REUSE.toml`** and **`.github/workflows/reuse.yml`** (snippets above).
+4. **Add `REUSE.toml`**, **`.github/workflows/reuse.yml`**, and
+   **`.github/dependabot.yml`** (snippets above).
 5. **Declare the license** as `AGPL-3.0-or-later` in the manifest
    (`package.json` / `Cargo.toml`) and the README `## License` section. Replace any
    bare `AGPL-3.0` or `AGPL-3.0-only`.
@@ -176,8 +206,9 @@ under the blanket wildcard. For each genuine third-party file:
 
 - **Governance** reaches every repo — even a blank one — through this repo's
   defaults.
-- **Licensing / REUSE / CI** reach a new repo **only if it is created from the
-  template**. A repo started from scratch must be migrated with the steps above.
+- **Licensing / REUSE / CI / Dependabot** reach a new repo **only if it is
+  created from the template**. A repo started from scratch must be migrated with
+  the steps above.
 
 ---
 
