@@ -102,7 +102,9 @@ jobs:
               /^\s*(assisted-by|generated-by|ai-assisted|claude-session|copilot-session|amp-thread(-id)?)\s*:/im,
               // Footers and links back to an agent's session.
               /generated (with|by) \[?(claude( code)?|codex|copilot|cursor|opencode)\b/i,
-              /claude\.ai\/code\/session_|ampcode\.com\/threads\/|app\.devin\.ai\/sessions\/|chatgpt\.com\/codex\/tasks\//i,
+              /claude\.ai\/code\b|ampcode\.com\/threads\/|app\.devin\.ai\/sessions\/|chatgpt\.com\/codex\/tasks\//i,
+              // Claude Code's PR attribution marker ("Requested by … · project thread").
+              /claude-projects-attribution/i,
             ];
             const scan = (text) =>
               (text ?? "").split("\n").filter((line) => PATTERNS.some((re) => re.test(line)));
