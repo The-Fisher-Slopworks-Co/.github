@@ -6,7 +6,9 @@
 #
 # main only ever gains squashed pull requests, and GitHub uses the PR title as
 # the squash commit subject and the PR body as its body. So the PR — not a
-# local commit message — is where both rules actually have to hold.
+# local commit message — is where the title rule has to hold. Attribution is
+# checked in the PR's commits too: squashing turns every other commit author
+# into a `Co-authored-by:` trailer, and a commit message can carry one already.
 #
 # Call it from a repo (`.github/workflows/pr-title.yml`):
 #
@@ -78,30 +80,57 @@ jobs:
     name: No AI attribution
     runs-on: ubuntu-latest
     steps:
-      - name: Scan title and body
+      - name: Scan title, body and commits
         uses: actions/github-script@v9
         with:
           script: |
-            const { title, body } = context.payload.pull_request;
+            const { title, body, number } = context.payload.pull_request;
 
-            const PATTERNS = [
-              // Co-author trailers, by the address each agent signs with.
+            // Addresses agents sign commits and co-author trailers with.
+            const AGENT_EMAIL = [
               /noreply@(anthropic\.com|openai\.com|aider\.chat|opencode\.ai|z\.ai)\b/i,
               /\b(cursoragent@cursor\.com|amp@ampcode\.com|qwen-coder@alibabacloud\.com|copilot@github\.com)\b/i,
               /\d+\+(copilot|copilot-swe-agent|devin-ai-integration|factory-droid|gemini-code-assist|google-labs-jules)(\[bot\])?@users\.noreply\.github\.com/i,
+            ];
+            // Names agents commit under when the address is something else.
+            const AGENT_NAME =
+              /^(claude( code)?|codex|copilot|cursor( agent)?|devin(-ai-integration)?|aider|amp|opencode|jules|gemini( code assist)?)(\[bot\])?$/i;
+
+            const PATTERNS = [
+              ...AGENT_EMAIL,
               // Disclosure and session trailers, only at the start of a line.
               /^\s*(assisted-by|generated-by|ai-assisted|claude-session|copilot-session|amp-thread(-id)?)\s*:/im,
-              // PR-body footers and links back to an agent's session.
-              /generated with \[?(claude code|codex|copilot|cursor|opencode)\b/i,
+              // Footers and links back to an agent's session.
+              /generated (with|by) \[?(claude( code)?|codex|copilot|cursor|opencode)\b/i,
               /claude\.ai\/code\/session_|ampcode\.com\/threads\/|app\.devin\.ai\/sessions\/|chatgpt\.com\/codex\/tasks\//i,
             ];
+            const scan = (text) =>
+              (text ?? "").split("\n").filter((line) => PATTERNS.some((re) => re.test(line)));
 
-            const lines = `${title}\n${body ?? ""}`.split("\n");
-            const hits = lines.filter((line) => PATTERNS.some((re) => re.test(line)));
+            const problems = scan(`${title}\n${body ?? ""}`).map((line) => `PR: ${line.trim()}`);
 
-            if (hits.length > 0) {
+            const commits = await github.paginate(github.rest.pulls.listCommits, {
+              ...context.repo,
+              pull_number: number,
+              per_page: 100,
+            });
+            for (const { sha, commit } of commits) {
+              const short = sha.slice(0, 7);
+              for (const [role, who] of [["author", commit.author], ["committer", commit.committer]]) {
+                if (!who) continue;
+                if (AGENT_NAME.test(who.name.trim()) || AGENT_EMAIL.some((re) => re.test(who.email))) {
+                  problems.push(`${short} ${role}: ${who.name} <${who.email}>`);
+                }
+              }
+              for (const line of scan(commit.message)) {
+                problems.push(`${short} message: ${line.trim()}`);
+              }
+            }
+
+            if (problems.length > 0) {
               core.setFailed(
-                "Remove the AI attribution from the PR title/body (see CLAUDE.md → Definition of done):\n" +
-                  hits.map((line) => `  ${line.trim()}`).join("\n"),
+                "Remove the AI attribution from the PR title/body and its commits " +
+                  "(rewrite the commits under your own identity; see CLAUDE.md → Definition of done):\n" +
+                  problems.map((p) => `  ${p}`).join("\n"),
               );
             }
