@@ -1,0 +1,154 @@
+# SPDX-FileCopyrightText: 2026 The Fisher Slopworks Co
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Reusable: label every PR `size:XS`…`size:XXL` by effective lines changed
+# (additions + deletions, minus tests, lockfiles and generated files), and
+# leave one reminder comment on `size:XL` and above.
+#
+# Call it from a repo (`.github/workflows/pr-size.yml`):
+#
+#   name: PR size
+#   on:
+#     pull_request_target:
+#       types: [opened, synchronize, reopened, ready_for_review]
+#   concurrency:
+#     group: pr-size-${{ github.event.pull_request.number }}
+#     cancel-in-progress: true
+#   permissions:
+#     contents: read
+#     pull-requests: write
+#     issues: write
+#   jobs:
+#     pr-size:
+#       uses: The-Fisher-Slopworks-Co/.github/.github/workflows/pr-size.yml@main
+#
+# `pull_request_target` gives the token write access on PRs from forks too;
+# this job never checks out or runs PR code, so that is safe.
+name: PR size
+
+on:
+  workflow_call:
+    inputs:
+      exclude:
+        description: >-
+          Extra path regexes (JavaScript syntax, one per line) whose changes do
+          not count, on top of the built-in list.
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  size:
+    name: Label by effective size
+    runs-on: ubuntu-latest
+    steps:
+      - name: Measure and label
+        uses: actions/github-script@v9
+        env:
+          EXTRA_EXCLUDE: ${{ inputs.exclude }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+
+            // Ascending by `max`; the first bucket the count fits in wins, so
+            // the last one is the catch-all. Colors run green to red.
+            const BUCKETS = [
+              { name: "size:XS", max: 10, color: "3fb950", description: "Under 10 effective lines changed" },
+              { name: "size:S", max: 30, color: "9bcc3f", description: "Under 30 effective lines changed" },
+              { name: "size:M", max: 100, color: "d4a72c", description: "Under 100 effective lines changed" },
+              { name: "size:L", max: 300, color: "e8843c", description: "Under 300 effective lines changed" },
+              { name: "size:XL", max: 1000, color: "e5534b", description: "Under 1000 effective lines changed — split it" },
+              { name: "size:XXL", max: Infinity, color: "a32e29", description: "1000+ effective lines changed — split it" },
+            ];
+
+            // Files that inflate the diff without adding anything to read.
+            const EXCLUDED = [
+              /\.test\.[cm]?[jt]sx?$/,
+              /_test\.go$/,
+              /(^|\/)(bun\.lock|package-lock\.json|go\.sum|Cargo\.lock)$/,
+              /(^|\/)(dist|build|vendor|node_modules|generated)\//,
+              /\.min\.(js|css)$/,
+              /\.(snap|lock)$/,
+              ...process.env.EXTRA_EXCLUDE.split("\n")
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((source) => new RegExp(source)),
+            ];
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number: issue_number,
+              per_page: 100,
+            });
+
+            let effective = 0;
+            for (const file of files) {
+              if (EXCLUDED.some((pattern) => pattern.test(file.filename))) continue;
+              effective += file.additions + file.deletions;
+            }
+
+            const bucket = BUCKETS.find((candidate) => effective < candidate.max);
+            core.info(`${files.length} changed file(s), ${effective} effective line(s) -> ${bucket.name}`);
+
+            // createLabel is the only idempotent-ish way in: 422 means it is
+            // already there, which is exactly what we want.
+            try {
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name: bucket.name,
+                color: bucket.color,
+                description: bucket.description,
+              });
+            } catch (error) {
+              if (error.status !== 422) throw error;
+            }
+
+            const present = await github.paginate(github.rest.issues.listLabelsOnIssue, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+
+            for (const label of present) {
+              if (!label.name.startsWith("size:") || label.name === bucket.name) continue;
+              await github.rest.issues.removeLabel({ owner, repo, issue_number, name: label.name });
+            }
+
+            if (!present.some((label) => label.name === bucket.name)) {
+              await github.rest.issues.addLabels({ owner, repo, issue_number, labels: [bucket.name] });
+            }
+
+            if (bucket.name !== "size:XL" && bucket.name !== "size:XXL") return;
+
+            // Every push re-runs this job, so the marker is what keeps the
+            // reminder from turning into a wall of identical comments.
+            const MARKER = "<!-- pr-size-reminder -->";
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+
+            if (comments.some((comment) => (comment.body ?? "").includes(MARKER))) return;
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body: [
+                MARKER,
+                `This pull request changes **${effective} effective lines** (tests, lockfiles and generated files already excluded).`,
+                "",
+                "The Definition of done in `CLAUDE.md` asks to split anything past ~300 lines into several pull requests — a reviewer reads a small one properly and skims a large one.",
+              ].join("\n"),
+            });
