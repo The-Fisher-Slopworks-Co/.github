@@ -31,7 +31,9 @@
 #     pr-preview:
 #       uses: The-Fisher-Slopworks-Co/.github/.github/workflows/pr-preview.yml@main
 #       with:
-#         pr: ${{ inputs.pr }}
+#         # A dispatched input is a string; `fromJSON` makes it the number
+#         # this workflow expects.
+#         pr: ${{ fromJSON(inputs.pr) }}
 name: PR preview
 
 on:
