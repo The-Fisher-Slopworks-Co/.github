@@ -171,7 +171,8 @@ its code is not the org's to license; our changes there are contributed under
 the upstream license.
 
 It still uses REUSE: `reuse lint` passes and CI calls the reusable `reuse.yml`.
-`LICENSES/` holds the upstream license text and `REUSE.toml` annotates the
+`LICENSES/<SPDX-ID>.txt` is a symlink to the upstream root `LICENSE` (for
+`cli`: `LICENSES/MIT.txt -> ../LICENSE`), and `REUSE.toml` annotates the
 files with the upstream license and the upstream copyright holders instead of
 AGPL and the org. For `cli` that is:
 
