@@ -1,0 +1,114 @@
+# SPDX-FileCopyrightText: 2026 The Fisher Slopworks Co
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Reusable: build the dispatched branch and publish it as the `:preview` image,
+# then say so on its pull request.
+#
+# Started by `pr-deploy.yml` on a `/deploy` comment, or by hand from the
+# Actions tab. It runs on `workflow_dispatch`, which only people with write
+# access can trigger, and builds the branch it was dispatched on, so no
+# untrusted ref is ever checked out with the package-write token.
+#
+# Call it from a repo (`.github/workflows/pr-preview.yml`):
+#
+#   name: PR preview
+#   on:
+#     workflow_dispatch:
+#       inputs:
+#         pr:
+#           description: Pull request number
+#           required: true
+#           type: number
+#   concurrency:
+#     group: pr-preview-${{ inputs.pr }}
+#     cancel-in-progress: true
+#   permissions:
+#     contents: read
+#     packages: write
+#     pull-requests: write
+#   jobs:
+#     pr-preview:
+#       uses: The-Fisher-Slopworks-Co/.github/.github/workflows/pr-preview.yml@main
+#       with:
+#         pr: ${{ inputs.pr }}
+name: PR preview
+
+on:
+  workflow_call:
+    inputs:
+      pr:
+        description: Pull request whose branch this run was dispatched on.
+        type: number
+        required: true
+      platforms:
+        description: Target platforms for `docker buildx`.
+        type: string
+        default: linux/amd64
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+jobs:
+  preview:
+    name: Publish branch as preview image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the branch belongs to the PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          PR_DATA=$(gh api "repos/$REPO/pulls/$PR_NUMBER")
+          HEAD=$(jq -r '.head.repo.full_name + ":" + .head.ref' <<<"$PR_DATA")
+          if [ "$HEAD" != "$REPO:$BRANCH" ]; then
+            echo "::error::PR #$PR_NUMBER is $HEAD, not $REPO:$BRANCH"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Lowercase image name
+        id: img
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push preview image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: ${{ inputs.platforms }}
+          push: true
+          tags: ${{ steps.img.outputs.name }}:preview
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
+          cache-from: type=gha,scope=preview
+          cache-to: type=gha,mode=max,scope=preview,ignore-error=true
+
+      - name: Comment success
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          IMAGE: ${{ steps.img.outputs.name }}
+        run: |
+          gh pr comment "$PR_NUMBER" --repo "$REPO" \
+            --body "✅ Preview image published: \`$IMAGE:preview\` from branch \`$BRANCH\` at \`$SHA\`."

@@ -65,7 +65,7 @@ knip, lefthook and the strict tsconfig; Go projects use golangci-lint and
 | # | What | Where |
 |---|---|---|
 | C1 | Dockerfile; `release.yml` on push to main runs the gate, then builds and publishes to GHCR (`latest`, long and short SHA tags) | `Dockerfile`, `.github/workflows/release.yml` |
-| C2 | Preview image from a PR by commenting `/deploy` (members only, no forks) | `.github/workflows/pr-deploy.yml` |
+| C2 | Preview image from a PR by commenting `/deploy` (members only, no forks) | `.github/workflows/pr-deploy.yml` + `pr-preview.yml`, calling the reusable workflows of the same names |
 | C3 | `.env.example` and `docker-compose.yml` | repo root |
 
 ## Definition of done
@@ -99,9 +99,17 @@ caller snippet.
 | `reuse.yml` | `push` / `pull_request` on main | none |
 | `pr-title.yml` | `pull_request` (`opened`, `edited`, `synchronize`, `reopened`) | `scopes` (one per line, empty = any), `require-scope` (default `true`) |
 | `pr-size.yml` | `pull_request_target` (`opened`, `synchronize`, `reopened`, `ready_for_review`) | `exclude` (extra path regexes) |
+| `pr-deploy.yml` | `issue_comment` (`created`) | `preview-workflow` (default `pr-preview.yml`) |
+| `pr-preview.yml` | `workflow_dispatch` with a `pr` number input | `pr`, `platforms` (default `linux/amd64`) |
 
 A reusable workflow cannot get more permissions than its caller grants, so the
 caller's `permissions:` block has to match the one in the snippet.
+
+The preview build is split in two so that nothing privileged checks out PR
+code: `pr-deploy.yml` runs on the comment with a write token but only checks
+the commenter and the branch, then dispatches `pr-preview.yml` on the PR
+branch, which builds and pushes the image. A PR branch needs `pr-preview.yml`
+(that is, has to be based on a main that has it) before `/deploy` works on it.
 
 ## Dependabot
 
