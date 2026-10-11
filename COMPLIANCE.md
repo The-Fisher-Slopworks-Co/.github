@@ -44,7 +44,7 @@ license and copyright but are still REUSE compliant — see
 
 | Requirement | File(s) in the repo | Canonical value |
 |---|---|---|
-| License text | `LICENSE` (root) **and** `LICENSES/AGPL-3.0-or-later.txt` | output of `reuse download AGPL-3.0-or-later` (official SPDX text), byte-identical in both |
+| License text | `LICENSE` (root) **and** `LICENSES/AGPL-3.0-or-later.txt` | `LICENSE` is the output of `reuse download AGPL-3.0-or-later` (official SPDX text); `LICENSES/AGPL-3.0-or-later.txt` is a symlink to `../LICENSE` |
 | License declared (machine) | `package.json` `"license"` / `Cargo.toml` `license` | `AGPL-3.0-or-later` |
 | License declared (prose) | `README.md` → `## License` section | `AGPL-3.0-or-later. See [LICENSE](LICENSE).` |
 | REUSE config | `REUSE.toml` | `**` wildcard, holder `<year> The Fisher Slopworks Co`, `AGPL-3.0-or-later` |
@@ -129,8 +129,9 @@ Work on a branch and open a PR.
    confidently resolve one, stop and ask rather than blanket over it.
 3. **Add the license text:**
    ```bash
-   reuse download AGPL-3.0-or-later            # writes LICENSES/AGPL-3.0-or-later.txt
-   cp LICENSES/AGPL-3.0-or-later.txt LICENSE   # root copy so GitHub detects the license
+   reuse download AGPL-3.0-or-later --output LICENSE   # root file, so GitHub detects the license
+   mkdir -p LICENSES
+   ln -s ../LICENSE LICENSES/AGPL-3.0-or-later.txt      # REUSE reads the text through the link
    ```
 4. **Add `REUSE.toml`** and **`.github/workflows/reuse.yml`** (the
    reusable-workflow caller above), and **`.github/dependabot.yml`** as in
@@ -150,6 +151,8 @@ Files copied from another project keep **their** license — never relicense the
 under the blanket wildcard. For each genuine third-party file:
 
 1. `reuse download <SPDX-ID>` (e.g. `MIT`) to add its text under `LICENSES/`.
+   This one is a regular file: only the project's own license is a symlink to
+   the root `LICENSE`.
 2. Add a specific `REUSE.toml` annotation with the **true** holder and license:
    ```toml
    [[annotations]]
