@@ -2,11 +2,26 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+# Runs on this repo's own pushes and PRs, and is reusable from any other repo
+# (`.github/workflows/reuse.yml`):
+#
+#   name: REUSE
+#   on:
+#     push:
+#       branches: [main]
+#     pull_request:
+#       branches: [main]
+#   permissions:
+#     contents: read
+#   jobs:
+#     reuse:
+#       uses: The-Fisher-Slopworks-Co/.github/.github/workflows/reuse.yml@main
 name: REUSE Compliance
 
 on:
   push:
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read

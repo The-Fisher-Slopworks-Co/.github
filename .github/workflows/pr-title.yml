@@ -1,0 +1,138 @@
+# SPDX-FileCopyrightText: 2026 The Fisher Slopworks Co
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Reusable: conventional-commit PR titles and no AI attribution in the PR.
+#
+# main only ever gains squashed pull requests, and GitHub uses the PR title as
+# the squash commit subject and the PR body as its body. So the PR — not a
+# local commit message — is where the title rule has to hold. Attribution is
+# checked in the PR's commits too: squashing turns every other commit author
+# into a `Co-authored-by:` trailer, and a commit message can carry one already.
+#
+# Call it from a repo (`.github/workflows/pr-title.yml`):
+#
+#   name: PR title
+#   on:
+#     pull_request:
+#       types: [opened, edited, synchronize, reopened]
+#   concurrency:
+#     group: pr-title-${{ github.event.pull_request.number }}
+#     cancel-in-progress: true
+#   permissions:
+#     contents: read
+#     pull-requests: read
+#   jobs:
+#     pr-title:
+#       uses: The-Fisher-Slopworks-Co/.github/.github/workflows/pr-title.yml@main
+#       with:
+#         scopes: |
+#           bot
+#           deps
+#           github
+name: PR title
+
+on:
+  workflow_call:
+    inputs:
+      scopes:
+        description: Allowed scopes, one per line. Empty allows any scope.
+        type: string
+        default: ""
+      require-scope:
+        description: Fail a title that has no scope.
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  title:
+    name: Conventional commit title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate title
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            refactor
+            chore
+            docs
+            test
+            ci
+            perf
+            revert
+          scopes: ${{ inputs.scopes }}
+          requireScope: ${{ inputs.require-scope }}
+          subjectPattern: '^(?![A-Z]).+[^.\s]$'
+          subjectPatternError: >-
+            The subject "{subject}" of "{title}" is invalid: it must start with
+            a lowercase letter, be phrased in the imperative ("add", not
+            "Added"), and must not end with a period.
+
+  attribution:
+    name: No AI attribution
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan title, body and commits
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { title, body, number } = context.payload.pull_request;
+
+            // Addresses agents sign commits and co-author trailers with.
+            const AGENT_EMAIL = [
+              /noreply@(anthropic\.com|openai\.com|aider\.chat|opencode\.ai|z\.ai)\b/i,
+              /\b(cursoragent@cursor\.com|amp@ampcode\.com|qwen-coder@alibabacloud\.com|copilot@github\.com)\b/i,
+              /\d+\+(copilot|copilot-swe-agent|devin-ai-integration|factory-droid|gemini-code-assist|google-labs-jules)(\[bot\])?@users\.noreply\.github\.com/i,
+            ];
+            // Names agents commit under when the address is something else.
+            const AGENT_NAME =
+              /^(claude( code)?|codex|copilot|cursor( agent)?|devin(-ai-integration)?|aider|amp|opencode|jules|gemini( code assist)?)(\[bot\])?$/i;
+
+            const PATTERNS = [
+              ...AGENT_EMAIL,
+              // Disclosure and session trailers, only at the start of a line.
+              /^\s*(assisted-by|generated-by|ai-assisted|claude-session|copilot-session|amp-thread(-id)?)\s*:/im,
+              // Footers and links back to an agent's session.
+              /generated (with|by) \[?(claude( code)?|codex|copilot|cursor|opencode)\b/i,
+              /claude\.ai\/code\b|ampcode\.com\/threads\/|app\.devin\.ai\/sessions\/|chatgpt\.com\/codex\/tasks\//i,
+              // Claude Code's PR attribution marker ("Requested by … · project thread").
+              /claude-projects-attribution/i,
+            ];
+            const scan = (text) =>
+              (text ?? "").split("\n").filter((line) => PATTERNS.some((re) => re.test(line)));
+
+            const problems = scan(`${title}\n${body ?? ""}`).map((line) => `PR: ${line.trim()}`);
+
+            const commits = await github.paginate(github.rest.pulls.listCommits, {
+              ...context.repo,
+              pull_number: number,
+              per_page: 100,
+            });
+            for (const { sha, commit } of commits) {
+              const short = sha.slice(0, 7);
+              for (const [role, who] of [["author", commit.author], ["committer", commit.committer]]) {
+                if (!who) continue;
+                if (AGENT_NAME.test(who.name.trim()) || AGENT_EMAIL.some((re) => re.test(who.email))) {
+                  problems.push(`${short} ${role}: ${who.name} <${who.email}>`);
+                }
+              }
+              for (const line of scan(commit.message)) {
+                problems.push(`${short} message: ${line.trim()}`);
+              }
+            }
+
+            if (problems.length > 0) {
+              core.setFailed(
+                "Remove the AI attribution from the PR title/body and its commits " +
+                  "(rewrite the commits under your own identity; see CLAUDE.md → Definition of done):\n" +
+                  problems.map((p) => `  ${p}`).join("\n"),
+              );
+            }
