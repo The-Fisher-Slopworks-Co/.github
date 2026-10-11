@@ -1,0 +1,84 @@
+# SPDX-FileCopyrightText: 2026 The Fisher Slopworks Co
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Reusable: on a `/deploy` comment, start the repo's preview build for the PR.
+#
+# This half runs on `issue_comment`, which carries a write token, so it never
+# checks out or runs PR code. It only checks who asked and where the branch
+# lives, then dispatches the repo's `pr-preview.yml` (see that file) on the PR
+# branch. `workflow_dispatch` is the one event a GITHUB_TOKEN may start, and
+# only people with write access can dispatch a workflow at all.
+#
+# Call it from a repo (`.github/workflows/pr-deploy.yml`):
+#
+#   name: PR deploy
+#   on:
+#     issue_comment:
+#       types: [created]
+#   permissions:
+#     actions: write
+#     contents: read
+#     pull-requests: write
+#   jobs:
+#     pr-deploy:
+#       uses: The-Fisher-Slopworks-Co/.github/.github/workflows/pr-deploy.yml@main
+name: PR deploy
+
+on:
+  workflow_call:
+    inputs:
+      preview-workflow:
+        description: The repo's workflow file that builds the preview image.
+        type: string
+        default: pr-preview.yml
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  dispatch:
+    name: Dispatch preview build
+    if: |
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/deploy') &&
+      contains(fromJson('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Acknowledge comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          gh api -X POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/$REPO/issues/comments/$COMMENT_ID/reactions" \
+            -f content=rocket
+
+      - name: Dispatch the PR branch's preview build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          WORKFLOW: ${{ inputs.preview-workflow }}
+        run: |
+          PR_DATA=$(gh api "repos/$REPO/pulls/$PR_NUMBER")
+          # A dispatch can only target a branch of this repository, and the
+          # build then runs that branch's Dockerfile with a package-write token,
+          # so fork PRs are refused outright.
+          HEAD_REPO=$(jq -r .head.repo.full_name <<<"$PR_DATA")
+          if [ "$HEAD_REPO" != "$REPO" ]; then
+            gh pr comment "$PR_NUMBER" --repo "$REPO" \
+              --body "❌ Preview images are built only from branches of this repository, not from forks (\`$HEAD_REPO\`)."
+            echo "::error::Refusing to build a fork PR ($HEAD_REPO)"
+            exit 1
+          fi
+          BRANCH=$(jq -r .head.ref <<<"$PR_DATA")
+          if ! gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$BRANCH" -f pr="$PR_NUMBER"; then
+            gh pr comment "$PR_NUMBER" --repo "$REPO" \
+              --body "❌ Could not start \`$WORKFLOW\` on \`$BRANCH\`. Is the branch up to date with main?"
+            exit 1
+          fi
