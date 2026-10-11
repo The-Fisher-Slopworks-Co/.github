@@ -33,6 +33,7 @@ Archived repositories are out of scope.
 | A9 | CI gate | `.github/workflows/ci.yml` (+ `check.yml` when a release workflow reuses it) | runs the repo's whole check gate on PRs to main, `permissions: contents: read`, `concurrency` per ref |
 | A10 | Pinned third-party actions | all workflows | actions outside `actions/*`, `github/*` and the stack's official setup action are pinned by SHA with a `# vX.Y.Z` comment |
 | A11 | Claude Code settings | `.claude/settings.json` | enabled plugins: `claude-md-management`, `commit-commands`, plus the stack's LSP plugin |
+| A12 | PR settings and ruleset | GitHub settings | applied by [scripts/repo-settings.sh](scripts/repo-settings.sh), see [Pull request settings](#pull-request-settings) |
 
 Optional: `.github/labeler.yml` + a `pr-labels.yml` job for `area:*` labels in
 repos big enough to have areas, and `.git-blame-ignore-revs` once a
@@ -140,3 +141,27 @@ updates:
       actions:
         update-types: [minor, patch]
 ```
+
+## Pull request settings
+
+Every active repository merges the same way. Run
+[`scripts/repo-settings.sh`](scripts/repo-settings.sh) once per repo (and again
+whenever its CI check names change). It is idempotent:
+
+```bash
+scripts/repo-settings.sh <repo> "<CI gate check name>" "<REUSE check name>"
+```
+
+It sets:
+
+- **Merging:** squash only. The commit title is the PR title and the body is
+  the PR body. The head branch is deleted after merge. Auto-merge is off.
+- **Ruleset `main` on the default branch:** no deletion and no force-push.
+  Changes go in only through a squash-merged PR with every review thread
+  resolved, 0 required approvals, and the given status checks green on an
+  up-to-date branch. Repository admins can bypass it.
+
+Required checks are the job names as GitHub reports them on a PR (for example
+`check / Type check & tests` and `REUSE compliance` in any_talker). When a repo
+switches to the reusable workflows, its check names change, so rerun the script
+with the new names.
