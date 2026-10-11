@@ -36,7 +36,8 @@ Every project repository must:
 
 Genuine third-party files keep their own license — see
 [Third-party code](#third-party-code-multiple-licenses). Forks of outside
-projects are the one exception to points 1–3 — see
+projects are the one exception to points 1 and 3: they keep their upstream
+license and copyright but are still REUSE compliant — see
 [Forks of outside projects](#forks-of-outside-projects).
 
 ## Where each piece lives
@@ -165,10 +166,27 @@ under the blanket wildcard. For each genuine third-party file:
 
 A fork of a project the org does not own (today: `cli`, a fork of
 [gotd/cli](https://github.com/gotd/cli)) keeps the upstream license and its
-upstream copyright. It is not relicensed to AGPL and gets no blanket
-`REUSE.toml`, because the bulk of its code is not the org's to license. Our
-changes there are contributed under the upstream license. The rest of the
-standard (workflows, PR rules, Definition of done) still applies.
+upstream copyright holders. It is not relicensed to AGPL, because the bulk of
+its code is not the org's to license; our changes there are contributed under
+the upstream license.
+
+It still uses REUSE: `reuse lint` passes and CI calls the reusable `reuse.yml`.
+`LICENSES/` holds the upstream license text and `REUSE.toml` annotates the
+files with the upstream license and the upstream copyright holders instead of
+AGPL and the org. For `cli` that is:
+
+```toml
+version = 1
+
+[[annotations]]
+path = "**"
+precedence = "closest"
+SPDX-FileCopyrightText = "gotd contributors"
+SPDX-License-Identifier = "MIT"
+```
+
+The upstream `LICENSE` file stays as it is. The rest of the standard
+(workflows, PR rules, Definition of done) applies as usual.
 
 ## Verifying & gotchas
 

@@ -22,7 +22,7 @@ Archived repositories are out of scope.
 
 | # | What | Where | Notes |
 |---|---|---|---|
-| A1 | Licensing and REUSE | see [COMPLIANCE.md](COMPLIANCE.md) | REUSE CI calls the reusable `reuse.yml`. Forks of outside projects keep the upstream license and skip it (see [COMPLIANCE.md → Forks](COMPLIANCE.md#forks-of-outside-projects)) |
+| A1 | Licensing and REUSE | see [COMPLIANCE.md](COMPLIANCE.md) | REUSE CI calls the reusable `reuse.yml`. Forks of outside projects keep the upstream license (no AGPL) but still use REUSE, annotated with the upstream license and copyright holders, e.g. `cli`: MIT, gotd contributors (see [COMPLIANCE.md → Forks](COMPLIANCE.md#forks-of-outside-projects)) |
 | A2 | `CLAUDE.md` + `AGENTS.md` | repo root | `AGENTS.md` is a symlink to `CLAUDE.md`. Covers commands, layout, conventions and the Definition of done below |
 | A3 | Definition of done | `CLAUDE.md` | copy the section below, adjusting the gate command and scopes |
 | A4 | PR title check | `.github/workflows/pr-title.yml` | calls the reusable `pr-title.yml` with the repo's scopes |
