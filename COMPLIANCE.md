@@ -27,13 +27,17 @@ Every project repository must:
    enforced by CI on every push and pull request.
 3. Carry the canonical license text and a `REUSE.toml`, copyright
    **`<year> The Fisher Slopworks Co`**.
-4. **Not** ship its own Code of Conduct / Security policy / Contributing guide /
-   PR and issue templates — those are inherited from this `.github` repo.
+4. **Not** ship its own Code of Conduct / Security policy / Contributing guide —
+   those are inherited from this `.github` repo, as are the PR and issue
+   templates (a repo may keep its own issue templates when they ask for
+   project-specific details; see [STANDARD.md](STANDARD.md) A6).
 5. Keep dependencies and CI actions current via **Dependabot**, configured as in
    [STANDARD.md → Dependabot](STANDARD.md#dependabot).
 
 Genuine third-party files keep their own license — see
-[Third-party code](#third-party-code-multiple-licenses).
+[Third-party code](#third-party-code-multiple-licenses). Forks of outside
+projects are the one exception to points 1–3 — see
+[Forks of outside projects](#forks-of-outside-projects).
 
 ## Where each piece lives
 
@@ -48,7 +52,7 @@ Genuine third-party files keep their own license — see
 | Code of Conduct | *(none — inherited)* | this repo's `CODE_OF_CONDUCT.md` |
 | Security policy | *(none — inherited)* | this repo's `SECURITY.md` (contact `security@slopworks.org`) |
 | Contributing guide | *(none — inherited)* | this repo's `CONTRIBUTING.md` |
-| PR / issue templates | *(none — inherited)* | this repo's `.github/pull_request_template.md` and `.github/ISSUE_TEMPLATE/` |
+| PR / issue templates | *(none — inherited; own issue templates allowed)* | this repo's `.github/pull_request_template.md` and `.github/ISSUE_TEMPLATE/` |
 
 Rule of thumb: to change a **license** detail, edit the repo. To change a
 **governance** doc, edit it **here** once and every repo follows.
@@ -156,6 +160,15 @@ under the blanket wildcard. For each genuine third-party file:
 3. Confirm with `reuse spdx | grep <file>` that it resolves to the right license.
 
 (In the org today, `xfleet` and `kaban_ops` carry shadcn/ui components as MIT.)
+
+## Forks of outside projects
+
+A fork of a project the org does not own (today: `cli`, a fork of
+[gotd/cli](https://github.com/gotd/cli)) keeps the upstream license and its
+upstream copyright. It is not relicensed to AGPL and gets no blanket
+`REUSE.toml`, because the bulk of its code is not the org's to license. Our
+changes there are contributed under the upstream license. The rest of the
+standard (workflows, PR rules, Definition of done) still applies.
 
 ## Verifying & gotchas
 
