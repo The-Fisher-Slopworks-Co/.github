@@ -7,13 +7,15 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 How every The Fisher Slopworks Co repository handles **licensing**, **REUSE**, and
 **governance** — what each repo must contain, where each piece lives, and how to
-add or migrate a project. This is the single reference. The machinery that ships
-the standard lives in two repos:
+add or migrate a project. This is the single reference for licensing. The
+machinery that ships the standard lives in one repo:
 
-- [`template`](https://github.com/The-Fisher-Slopworks-Co/template) — the starting
-  point new repos are **created from** (files are copied in).
-- [`.github`](https://github.com/The-Fisher-Slopworks-Co/.github) (this repo) — the
-  org-wide governance defaults, **inherited** by every repo automatically.
+- [`.github`](https://github.com/The-Fisher-Slopworks-Co/.github) (this repo): the
+  org-wide governance defaults, PR and issue templates and reusable workflows,
+  inherited or called by every repo.
+
+Everything beyond licensing (CI, PR rules, tooling, Definition of done) is in
+[STANDARD.md](STANDARD.md).
 
 ## The standard, in one glance
 
@@ -25,10 +27,10 @@ Every project repository must:
    enforced by CI on every push and pull request.
 3. Carry the canonical license text and a `REUSE.toml`, copyright
    **`<year> The Fisher Slopworks Co`**.
-4. **Not** ship its own Code of Conduct / Security policy / Contributing guide —
-   those are inherited from this `.github` repo.
-5. Keep its CI actions current via **Dependabot** — `.github/dependabot.yml`
-   tracking the `github-actions` ecosystem, weekly and grouped into one PR.
+4. **Not** ship its own Code of Conduct / Security policy / Contributing guide /
+   PR and issue templates — those are inherited from this `.github` repo.
+5. Keep dependencies and CI actions current via **Dependabot**, configured as in
+   [STANDARD.md → Dependabot](STANDARD.md#dependabot).
 
 Genuine third-party files keep their own license — see
 [Third-party code](#third-party-code-multiple-licenses).
@@ -41,11 +43,12 @@ Genuine third-party files keep their own license — see
 | License declared (machine) | `package.json` `"license"` / `Cargo.toml` `license` | `AGPL-3.0-or-later` |
 | License declared (prose) | `README.md` → `## License` section | `AGPL-3.0-or-later. See [LICENSE](LICENSE).` |
 | REUSE config | `REUSE.toml` | `**` wildcard, holder `<year> The Fisher Slopworks Co`, `AGPL-3.0-or-later` |
-| REUSE CI | `.github/workflows/reuse.yml` | `fsfe/reuse-action@v6` |
-| Dependabot | `.github/dependabot.yml` | `github-actions` ecosystem, `weekly` / monday, grouped under `*` |
+| REUSE CI | `.github/workflows/reuse.yml` | calls this repo's reusable `reuse.yml` |
+| Dependabot | `.github/dependabot.yml` | see [STANDARD.md → Dependabot](STANDARD.md#dependabot) |
 | Code of Conduct | *(none — inherited)* | this repo's `CODE_OF_CONDUCT.md` |
 | Security policy | *(none — inherited)* | this repo's `SECURITY.md` (contact `security@slopworks.org`) |
 | Contributing guide | *(none — inherited)* | this repo's `CONTRIBUTING.md` |
+| PR / issue templates | *(none — inherited)* | this repo's `.github/pull_request_template.md` and `.github/ISSUE_TEMPLATE/` |
 
 Rule of thumb: to change a **license** detail, edit the repo. To change a
 **governance** doc, edit it **here** once and every repo follows.
@@ -72,45 +75,20 @@ SPDX-License-Identifier = "AGPL-3.0-or-later"
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-name: REUSE Compliance
+name: REUSE
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
 permissions:
   contents: read
 jobs:
   reuse:
-    name: REUSE lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: fsfe/reuse-action@v6
+    uses: The-Fisher-Slopworks-Co/.github/.github/workflows/reuse.yml@main
 ```
 
-`.github/dependabot.yml` — keep the GitHub Actions used by the repo's workflows
-current (a repo with package manifests should add the matching ecosystems —
-`npm`, `cargo`, `pip`, `gomod`, … — alongside this block):
-
-```yaml
-# SPDX-FileCopyrightText: 2026 The Fisher Slopworks Co
-#
-# SPDX-License-Identifier: AGPL-3.0-or-later
-
-# Keep the GitHub Actions used by our CI / release / REUSE workflows current.
-version: 2
-updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    commit-message:
-      prefix: "ci"
-    groups:
-      actions:
-        patterns:
-          - "*"
-```
+`.github/dependabot.yml`: see [STANDARD.md → Dependabot](STANDARD.md#dependabot).
 
 Inline SPDX header for source files (optional but encouraged; use the file's
 comment syntax, e.g. `//`, `#`, `--`):
@@ -122,21 +100,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## Adding a new project
 
-1. **Create from the template:** on GitHub click **“Use this template”**, or
-   ```bash
-   gh repo create The-Fisher-Slopworks-Co/<name> --template The-Fisher-Slopworks-Co/template --public
-   ```
-2. Clone it and run the initializer once:
-   ```bash
-   ./scripts/init.sh                 # or: ./scripts/init.sh "My Project" "Tagline."
-   ```
-   It writes a project `README.md`, deletes itself, and runs `reuse lint`.
-3. Build your project. Governance docs are inherited automatically — **don't add
-   your own**. Set your stack's license field to `AGPL-3.0-or-later`.
-
-The repo ships `LICENSE`, `LICENSES/`, `REUSE.toml`, the REUSE CI, and
-`.github/dependabot.yml` from the first commit, and inherits CoC / Security /
-Contributing from this repo.
+There is no template repository. Create an empty repo, then bring it to the
+standard exactly like an existing one: run the `slopworks-standardize` Claude
+skill on a branch (or follow
+[Migrating an existing project](#migrating-an-existing-project) plus the
+[STANDARD.md](STANDARD.md) checklist by hand) and open a PR. Governance docs are
+inherited automatically, so **don't add your own**.
 
 ## Migrating an existing project
 
@@ -158,8 +127,9 @@ Work on a branch and open a PR.
    reuse download AGPL-3.0-or-later            # writes LICENSES/AGPL-3.0-or-later.txt
    cp LICENSES/AGPL-3.0-or-later.txt LICENSE   # root copy so GitHub detects the license
    ```
-4. **Add `REUSE.toml`**, **`.github/workflows/reuse.yml`**, and
-   **`.github/dependabot.yml`** (snippets above).
+4. **Add `REUSE.toml`** and **`.github/workflows/reuse.yml`** (the
+   reusable-workflow caller above), and **`.github/dependabot.yml`** as in
+   [STANDARD.md → Dependabot](STANDARD.md#dependabot).
 5. **Declare the license** as `AGPL-3.0-or-later` in the manifest
    (`package.json` / `Cargo.toml`) and the README `## License` section. Replace any
    bare `AGPL-3.0` or `AGPL-3.0-only`.
@@ -206,9 +176,9 @@ under the blanket wildcard. For each genuine third-party file:
 
 - **Governance** reaches every repo — even a blank one — through this repo's
   defaults.
-- **Licensing / REUSE / CI / Dependabot** reach a new repo **only if it is
-  created from the template**. A repo started from scratch must be migrated with
-  the steps above.
+- **Licensing / REUSE / CI / Dependabot** reach a repo **only once it is brought
+  to the standard** with the steps above; a new repo starts empty. Once there,
+  changes to the reusable workflows here reach it automatically.
 
 ---
 

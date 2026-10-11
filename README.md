@@ -24,8 +24,8 @@ migrate repositories — is documented in [`COMPLIANCE.md`](COMPLIANCE.md).
 > with its own `CODE_OF_CONDUCT.md` / `CONTRIBUTING.md` / `SECURITY.md` overrides
 > the default. They are surfaced in each repo's *Community Standards* view but
 > are **not** copied into the repo — so they do not affect that repo's REUSE
-> compliance or its license. For licensing/REUSE, start new projects from the
-> [`template`](https://github.com/The-Fisher-Slopworks-Co/template) repository.
+> compliance or its license. For licensing/REUSE and the rest of the engineering
+> standard, see [`COMPLIANCE.md`](COMPLIANCE.md) and [`STANDARD.md`](STANDARD.md).
 
 ## License
 

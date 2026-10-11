@@ -12,5 +12,5 @@ Our repositories are **free software**, licensed under
 [REUSE](https://reuse.software/)-compliant, each with a Code of Conduct, a
 security policy, and contribution guidelines.
 
-New projects start from our
-[`template`](https://github.com/The-Fisher-Slopworks-Co/template) repository.
+Every project follows our
+[engineering standard](https://github.com/The-Fisher-Slopworks-Co/.github/blob/main/STANDARD.md).
