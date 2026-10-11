@@ -22,12 +22,12 @@ Archived repositories are out of scope.
 
 | # | What | Where | Notes |
 |---|---|---|---|
-| A1 | Licensing and REUSE | see [COMPLIANCE.md](COMPLIANCE.md) | REUSE CI calls the reusable `reuse.yml` |
+| A1 | Licensing and REUSE | see [COMPLIANCE.md](COMPLIANCE.md) | REUSE CI calls the reusable `reuse.yml`. Forks of outside projects keep the upstream license (no AGPL) but still use REUSE, annotated with the upstream license and copyright holders, e.g. `cli`: MIT, gotd contributors (see [COMPLIANCE.md → Forks](COMPLIANCE.md#forks-of-outside-projects)) |
 | A2 | `CLAUDE.md` + `AGENTS.md` | repo root | `AGENTS.md` is a symlink to `CLAUDE.md`. Covers commands, layout, conventions and the Definition of done below |
 | A3 | Definition of done | `CLAUDE.md` | copy the section below, adjusting the gate command and scopes |
 | A4 | PR title check | `.github/workflows/pr-title.yml` | calls the reusable `pr-title.yml` with the repo's scopes |
 | A5 | PR size labels | `.github/workflows/pr-size.yml` | calls the reusable `pr-size.yml` |
-| A6 | PR and issue templates | inherited | from this repo's `.github/`; a repo adds its own only to extend the checklist |
+| A6 | PR and issue templates | inherited | from this repo's `.github/`. A repo adds its own PR template only to extend the checklist, and may keep its own issue templates when they ask for project-specific details (e.g. the VS Code version for an extension) |
 | A7 | `CODEOWNERS` | `.github/CODEOWNERS` | `* @txssu` |
 | A8 | Dependabot | `.github/dependabot.yml` | snippet below |
 | A9 | CI gate | `.github/workflows/ci.yml` (+ `check.yml` when a release workflow reuses it) | runs the repo's whole check gate on PRs to main, `permissions: contents: read`, `concurrency` per ref |
@@ -59,6 +59,11 @@ Projects that are not built with Bun keep their toolchain and take the
 equivalent of B2–B7 in it: VS Code extensions stay on npm with oxlint, Prettier,
 knip, lefthook and the strict tsconfig; Go projects use golangci-lint and
 `go test` as their gate.
+
+VS Code extensions compile to CommonJS, where `verbatimModuleSyntax` rejects
+every `import`/`export`. They leave that one flag off, with a comment in
+`tsconfig.json`, and get the same effect from `isolatedModules` plus oxlint's
+`typescript/consistent-type-imports`.
 
 ## Layer C: deployed services
 
@@ -170,6 +175,6 @@ It sets:
   up-to-date branch. Repository admins can bypass it.
 
 Required checks are the job names as GitHub reports them on a PR (for example
-`check / Type check & tests` and `REUSE compliance` in any_talker). When a repo
+`check / Type check & tests` and `reuse / REUSE lint` in any_talker). When a repo
 switches to the reusable workflows, its check names change, so rerun the script
 with the new names.
