@@ -34,6 +34,7 @@ Archived repositories are out of scope.
 | A10 | Pinned third-party actions | all workflows | actions outside `actions/*`, `github/*` and the stack's official setup action are pinned by SHA with a `# vX.Y.Z` comment |
 | A11 | Claude Code settings | `.claude/settings.json` | enabled plugins: `claude-md-management`, `commit-commands`, plus the stack's LSP plugin |
 | A12 | PR settings and ruleset | GitHub settings | applied by [scripts/repo-settings.sh](scripts/repo-settings.sh), see [Pull request settings](#pull-request-settings) |
+| A13 | English only | whole repo | code, comments, docs, commit messages, issues and PRs are in English. The only exception is localization: translation files and docs that exist to provide another language |
 
 Optional: `.github/labeler.yml` + a `pr-labels.yml` job for `area:*` labels in
 repos big enough to have areas, and `.git-blame-ignore-revs` once a
@@ -81,7 +82,7 @@ list with the repo's own.
 ```markdown
 ### Definition of done
 
-- **Issues and pull requests are written in English** — title and body, whatever language the task was discussed in.
+- **Everything in the repo is written in English** — code, comments, docs, commit messages, issues and PRs (title and body), whatever language the task was discussed in. The only exception is localization: translations into other languages.
 - **Never commit to main.** Every task starts on a fresh branch off `origin/main`, named `<type>/<short-task>` — `fix/`, `feat/`, `refactor/`, `chore/`.
 - **One task = one branch = one PR.** Past ~300 changed lines, split it into several PRs. `size:XL` or `size:XXL` means split the PR, not "explain why it is large".
 - **PR title is the squash commit subject:** conventional commit with a scope, enforced by `.github/workflows/pr-title.yml`.
